@@ -59,3 +59,8 @@ Type: Precision Issue
 Detection: Amount has > 2 decimal places.
 Action: Round to 2 decimal places.
 Reason: Standardizes currency tracking and prevents floating point rounding explosions.
+
+## User Approval Workflow
+User approval workflow:
+Every destructive action requires approval.
+

@@ -14,6 +14,7 @@ app.use(morgan('dev')); // HTTP request logger
 const authRoutes = require('./src/routes/authRoutes');
 const groupRoutes = require('./src/routes/groupRoutes');
 const expenseRoutes = require('./src/routes/expenseRoutes');
+const anomalyRoutes = require('./src/routes/anomalyRoutes');
 
 // Health Check Route
 app.get('/health', (req, res) => {
@@ -24,6 +25,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/anomalies', anomalyRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {
