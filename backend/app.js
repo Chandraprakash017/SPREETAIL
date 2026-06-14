@@ -10,10 +10,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // HTTP request logger
 
+// Routes
+const authRoutes = require('./src/routes/authRoutes');
+
 // Health Check Route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', message: 'Backend is running smoothly.' });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {
