@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int                  @id @default(autoincrement())
+  email              String               @unique
+  passwordHash       String
+  name               String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  memberships        Membership[]
+  paidExpenses       Expense[]            @relation("ExpensePayer")
+  expenseShares      ExpenseParticipant[]
+  paidSettlements    Settlement[]         @relation("SettlementPayer")
+  receivedSettlements Settlement[]        @relation("SettlementPayee")
+}
+
+model Group {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  expenses    Expense[]
+  settlements Settlement[]
+}
+
+model Membership {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  group     Group     @relation(fields: [groupId], references: [id])
+  groupId   Int
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime? 
+  
+  // A user can join, leave, and join again, hence uniqueness involves joinedAt
+  @@unique([userId, groupId, joinedAt])
+}
+
+model Expense {
+  id           Int                  @id @default(autoincrement())
+  group        Group                @relation(fields: [groupId], references: [id])
+  groupId      Int
+  payer        User                 @relation("ExpensePayer", fields: [payerId], references: [id])
+  payerId      Int
+  amount       Decimal              @db.Decimal(10, 2)
+  currency     String               @default("USD")
+  description  String
+  date         DateTime
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  participants ExpenseParticipant[]
+}
+
+model ExpenseParticipant {
+  id              Int     @id @default(autoincrement())
+  expense         Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId       Int
+  user            User    @relation(fields: [userId], references: [id])
+  userId          Int
+  shareAmount     Decimal @db.Decimal(10, 2)
+  sharePercentage Decimal? @db.Decimal(5, 2)
+  
+  @@unique([expenseId, userId])
+}
+
+model Settlement {
+  id        Int      @id @default(autoincrement())
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   Int
+  payer     User     @relation("SettlementPayer", fields: [payerId], references: [id])
+  payerId   Int
+  payee     User     @relation("SettlementPayee", fields: [payeeId], references: [id])
+  payeeId   Int
+  amount    Decimal  @db.Decimal(10, 2)
+  currency  String   @default("USD")
+  date      DateTime @default(now())
+  status    String   @default("COMPLETED")
+}
+
+model ImportAnomaly {
+  id              Int      @id @default(autoincrement())
+  type            String
+  severity        String
+  description     String
+  suggestedAction String
+  confidenceScore Decimal  @db.Decimal(5, 2)
+  rawData         Json
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+}
