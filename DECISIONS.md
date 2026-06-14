@@ -9,3 +9,17 @@ Alternatives:
 
 Reason:
 Assignment explicitly requires relational DB.
+
+---
+
+# Decision 2
+
+Decision:
+Use Membership table instead of storing members directly.
+
+Reason:
+Sam joins later.
+Meera leaves earlier.
+
+Historical calculations require membership history.
+
