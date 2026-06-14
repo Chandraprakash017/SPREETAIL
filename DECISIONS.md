@@ -23,3 +23,15 @@ Meera leaves earlier.
 
 Historical calculations require membership history.
 
+---
+
+# Decision 3
+
+Decision:
+Store calculated participant shares.
+
+Reason:
+Traceability.
+Users can inspect exactly how balances were generated.
+
+
