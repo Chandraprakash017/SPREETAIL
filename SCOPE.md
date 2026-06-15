@@ -1,66 +1,47 @@
 # Import Anomaly Detection Scope
 
-## Anomaly 1
-Type: Duplicate Expense
-Detection: Same amount, same date, identical description.
-Action: Flagged for user approval.
-Reason: Avoid accidental double counting while preventing deletion of legitimate identical recurring expenses.
+This document outlines the 10 data quality anomalies detected by the `anomalyDetectionEngine` during CSV imports, detailing the detection logic and handling strategy.
 
-## Anomaly 2
-Type: Conflicting Duplicate
-Detection: Same date and description, but different amount.
-Action: Flag for user manual resolution.
-Reason: Prevents overriding legitimate updates or logging conflicting truths.
+## 1. Duplicate Expense
+- **Detection**: Locates an existing expense in the database with the exact same `date`, `description`, and `amount`.
+- **Handling Strategy**: Flagged with **Medium Severity**. Prompts user for approval to merge or ignore, preventing accidental deletion of legitimate recurring expenses (e.g., daily coffee).
 
-## Anomaly 3
-Type: Missing Currency
-Detection: Currency string is null or empty.
-Action: Default to USD pending user confirmation.
-Reason: Calculations require uniform currency; assuming default prevents hard failure.
+## 2. Conflicting Duplicate
+- **Detection**: Finds an existing expense with the same `date` and `description`, but a different `amount`.
+- **Handling Strategy**: Flagged with **High Severity**. Requires user manual resolution to ensure the system does not silently overwrite a verified historical truth.
 
-## Anomaly 4
-Type: Invalid Date
-Detection: Date string cannot be parsed by Date object.
-Action: Prompt user for manual date entry.
-Reason: Ensures temporal accuracy for balances.
+## 3. Missing Currency
+- **Detection**: Checks if the `currency` string is null, undefined, or empty.
+- **Handling Strategy**: Flagged with **Low Severity**. Defaults to the group's base currency (e.g., USD) pending user confirmation to ensure split calculations do not throw `NaN` errors.
 
-## Anomaly 5
-Type: Ambiguous Date
-Detection: Date parts (day and month) are both <= 12 (e.g., 04/05/2026).
-Action: Prompt user to confirm format (MM/DD vs DD/MM).
-Reason: Prevents logging an April expense in May.
+## 4. Invalid Date
+- **Detection**: Passes the date string into a Date constructor and checks for `isNaN`.
+- **Handling Strategy**: Flagged with **High Severity**. Rejects the row or prompts the user for manual entry. Temporal accuracy is strictly required for historical balances.
 
-## Anomaly 6
-Type: Unknown Member
-Detection: Participant email/name is not in the active Membership table.
-Action: Prompt to invite member or map to an existing one.
-Reason: Cannot assign financial liability to a ghost user.
+## 5. Ambiguous Date
+- **Detection**: Splits the date. If both the day and month segments evaluate to `<= 12` (e.g., `04/05/2026`), the format is strictly ambiguous.
+- **Handling Strategy**: Flagged with **Medium Severity**. Prompts the user to explicitly select `MM/DD/YYYY` or `DD/MM/YYYY`.
 
-## Anomaly 7
-Type: Former Member
-Detection: Expense date > participant's `leftAt` timestamp.
-Action: Reject participant split or prompt reactivation.
-Reason: Preserves the integrity of the historical ledger (Meera left earlier).
+## 6. Unknown Member
+- **Detection**: Iterates through the active `Membership` records of the Group. Flags if the participant's email is not found.
+- **Handling Strategy**: Flagged with **High Severity**. Prompts the user to send an invite link to the unknown member or map them to an existing user alias.
 
-## Anomaly 8
-Type: Settlement Logged as Expense
-Detection: Description contains keywords like 'settle', 'paid back'.
-Action: Convert row to a Settlement record.
-Reason: Settlements balance debts, whereas expenses increase gross ledger volume.
+## 7. Former Member
+- **Detection**: Compares the expense `date` against the participant's `leftAt` timestamp in the Membership table.
+- **Handling Strategy**: Flagged with **High Severity**. If the expense occurred after they left the group, the split is rejected to preserve the historical ledger.
 
-## Anomaly 9
-Type: Negative Amount
-Detection: Amount < 0.
-Action: Convert to refund or settlement.
-Reason: Expenses are fundamentally positive additions to shared cost.
+## 8. Settlement Logged as Expense
+- **Detection**: Uses a RegEx/keyword search against the description for terms like `settle`, `paid back`, `repayment`.
+- **Handling Strategy**: Flagged with **Medium Severity**. Suggests converting the row into a `Settlement` entity, as logging it as an expense would incorrectly inflate gross group spending.
 
-## Anomaly 10
-Type: Precision Issue
-Detection: Amount has > 2 decimal places.
-Action: Round to 2 decimal places.
-Reason: Standardizes currency tracking and prevents floating point rounding explosions.
+## 9. Negative Amount
+- **Detection**: Mathematical check for `amount < 0`.
+- **Handling Strategy**: Flagged with **High Severity**. Expenses represent positive financial liability. Suggests converting to a refund or settlement.
+
+## 10. Precision Issue
+- **Detection**: Checks if the decimal length of the amount strictly exceeds `2`.
+- **Handling Strategy**: Flagged with **Low Severity**. The system proposes rounding to 2 decimal places to prevent floating-point cascading errors during complex percentage splits.
 
 ## User Approval Workflow
-User approval workflow:
-Every destructive action requires approval.
-
+Every destructive action (Reject, Edit) requires explicit user approval. 
+Original anomalous payload data (`rawData`) is **never deleted**; the anomaly row simply shifts to a `REJECTED` or `EDITED_AND_APPROVED` status. This guarantees an immutable audit trail.
